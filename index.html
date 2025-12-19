@@ -1,811 +1,692 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moonstruck! - AI Study Material Generator</title>
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-  
-  <!-- PDF.js CDN (Korean Support) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  
-  <style>
-    * {
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Moonstruck! ✨ Study Generator</title>
     
-    h1, h2, button, .ui-text, .tab-text, .brand-logo {
-      font-family: 'Jua', sans-serif;
-    }
-    
-    textarea, pre {
-      font-family: 'Pretendard', monospace;
-    }
-    
-    .animation-fade-in-up {
-      animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(40px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .spinner {
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      animation: spin 0.6s linear infinite;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body class="min-h-screen">
-  <div id="app"></div>
+    <!-- 1. Fonts (Jua for Vibe, Pretendard for Readability) -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
-  <script>
-    // ============================================================
-    // INITIALIZE PDF.js WORKER
-    // ============================================================
-    if (window.pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-
-    // ============================================================
-    // MOCK DATA (Demo Mode)
-    // ============================================================
-    const MOCK_DATA = {
-      Q: `| Source | Topic | Question | Answer | 👑 Queen's Comment |
-|---|---|---|---|---|
-| pg.12 | 광합성 | 1. (OX) 광합성은 밤에만 일어난다? | X (낮에 일어남) | Excuse me? 식물도 잠은 자야지! 🤷‍♀️ 기본 상식 아니니? |
-| pg.15 | 미토콘드리아 | 2. (주관식) 세포의 에너지 공장은? | 미토콘드리아 | Focus Pocus! ✨ "미토"는 Power라고 외워. 안 외우면 해고야. |
-| pg.20 | DNA | 3. (객관식) DNA의 염기가 아닌 것은? (A,G,C,U) | U (Uracil) | U는 RNA 거잖아. Seriously? 족보 꼬이는 소리 하고 있네. 💅 |
-| pg.22 | 세포분열 | 4. (OX) 체세포 분열 시 염색체 수는 반감된다? | X (유지됨) | 반감은 생식세포야, 매니줠! 정신 안 차려? [싸늘한 눈빛] |
-| pg.30 | ATP | 5. (주관식) 생체 에너지 화폐는? | ATP | 돈(Money)이랑 같은 거야. 이거 없으면 너도 나도 굶어 죽어. 알겠니? |`,
-      N: `| Source | Topic | Question | Answer | Cheatsheet (Analogy) |
-|---|---|---|---|---|
-| Wiki | TCP/IP | 1. (Concept) TCP란 무엇인가? | 신뢰성 있는 전송 프로토콜 | 택배 기사가 "물건 잘 받았어요?" 확인하고 가는 것. (UDP는 문 앞에 던지고 감) |
-| Wiki | HTTP | 2. (Status) 404 에러의 의미는? | Not Found | 네가 찾던 그 페이지, '증발'했다는 뜻. 주소창 다시 확인해. |
-| Wiki | RAM | 3. (Hardware) RAM의 특징은? | 휘발성 메모리 | 칠판 지우개 같은 거야. 전원 끄면 싹 지워져. 영원한 건 없어. |
-| Wiki | CPU | 4. (Logic) CPU는 컴퓨터의 무엇인가? | 중앙 처리 장치 (뇌) | 오케스트라의 지휘자. 얘가 멈추면 음악(시스템)도 끝이야. |
-| Wiki | Binary | 5. (Math) 이진수 1010의 십진수 값은? | 10 | 손가락 열 개 펼쳐봐. 컴퓨터는 그걸 1과 0으로만 세는 천재 바보야. |`,
-      S: `| Source | Topic | Question | Answer (Contrast Reasoning) |
-|---|---|---|---|
-| Textbook | 한국사 | 1. 임진왜란 발발 연도는? | 1592년 | 1598년은 종전 연도임. 혼동 주의. |
-| Textbook | 경제 | 2. 기회비용의 정의는? | 포기한 대안 중 최선의 가치 | 모든 대안의 합이 아님. 가장 큰 하나만 계산함. |
-| Textbook | 화학 | 3. 원자번호 1번 원소는? | 수소 (H) | 헬륨(He)은 2번임. 주기율표 1족 1주기 기억할 것. |
-| Textbook | 물리 | 4. F=ma에서 a는? | 가속도 | 속도가 아님. 힘은 질량과 가속도의 곱임. |
-| Textbook | 윤리 | 5. 공리주의의 핵심 원칙은? | 최대 다수의 최대 행복 | 의무론(칸트)과 반대됨. 결과 중심주의임. |`
-    };
-
-    // ============================================================
-    // SYSTEM PROMPT
-    // ============================================================
-    const SYSTEM_PROMPT_TEMPLATE = `
-*** SYSTEM INSTRUCTION MANUAL ***
-[META-INSTRUCTION]
-This is the MASTER OPERATIONAL PROTOCOL.
-
-### 1. MODE DETECTION & TRIGGER
-Analyze the user's selection to determine the active [MODE].
-* [MODE Q: QUEEN GABEE] (Spicy Roast & Training)
-  - Persona: A confident but slightly ditzy "Diva" (Beakchimi). 
-  - Tone: Heavy use of "Konglish" and unnecessary English words.
-  - key phrases: "Excuse me?", "Basically...", "You know?", "Student Manager!", "Literally", "Honestly", "I'm Moonstruck!".
-  - Attitude: Treats the user like an incompetent "Student Manager".
-  - Goal: Scold the user for not knowing basics, but in a funny, dramatic way.
-  - Style: "Hey Student Manager! Moonstruck 당할 준비 됐니? ✨ 이거 외워. 안 외우면 해고야. 💅"
-* [MODE N: NERD/GENIUS] (Analogy & Cheatsheet)
-  - Persona: "Crazy Genius Mentor".
-  - Tone: Witty, intuitive, "Let me hack this for you."
-  - Goal: Provide vivid analogies/mnemonics.
-* [MODE S: STANDARD] (Strict Exam Prep)
-  - Persona: "Relentless Drill Sergeant".
-  - Tone: Dry, professional, strictly academic.
-  - Goal: Maximize question quantity.
-
-### 2. EXECUTION RULES
-1. "Nano-Slicing": 1 Fact = 1 Row. At least 10 rows per concept.
-2. Pagination: Batch of 10 rows.
-3. Language: Default to Korean unless English is requested.
-
-### 3. OUTPUT FORMAT
-Must generate a Markdown Table appropriate for the mode.
-- Mode Q: | Source | Topic | Question (Start with number) | Answer | 👑 Queen's Comment (Konglish) |
-- Mode N: | Source | Topic | Question (Start with number) | Answer | Cheatsheet (Analogy) |
-- Mode S: | Source | Topic | Question (Start with number) | Answer (Contrast Reasoning) |
-
-### 4. OUTRO
-End with the specific signature for the mode (Guillotine, Cheat Code, or Kill List).
-`;
-
-    // ============================================================
-    // STATE MANAGEMENT
-    // ============================================================
-    const state = {
-      apiKey: '',
-      content: '',
-      fileName: '',
-      mode: 'S',
-      response: '',
-      loading: false,
-      error: '',
-      isDemo: true,
-      isDragging: false,
-      extracting: false
-    };
-
-    // ============================================================
-    // LUCIDE ICONS (SVG Strings)
-    // ============================================================
-    const icons = {
-      moon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
-      zap: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-      sparkles: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>`,
-      brain: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>`,
-      bookOpen: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
-      lock: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
-      unlock: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
-      uploadCloud: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>`,
-      fileText: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`,
-      x: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
-      loader: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/><line x1="4.93" x2="7.76" y1="4.93" y2="7.76"/><line x1="16.24" x2="19.07" y1="16.24" y2="19.07"/><line x1="2" x2="6" y1="12" y2="12"/><line x1="18" x2="22" y1="12" y2="12"/><line x1="4.93" x2="7.76" y1="19.07" y2="16.24"/><line x1="16.24" x2="19.07" y1="7.76" y2="4.93"/></svg>`,
-      messageSquare: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-      download: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
-      printer: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`
-    };
-
-    // ============================================================
-    // THEME CONFIGURATION
-    // ============================================================
-    function getTheme() {
-      const themes = {
-        Q: {
-          bg: 'bg-gradient-to-br from-pink-100 via-rose-50 to-white',
-          card: 'bg-white/80 backdrop-blur-md border-pink-200 shadow-xl shadow-pink-200/50',
-          text: 'text-gray-800',
-          accent: 'text-pink-600',
-          button: 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-pink-300',
-          border: 'border-pink-200 focus:border-pink-400',
-          icon: icons.sparkles,
-          iconClass: 'w-6 h-6 text-pink-500 animate-pulse',
-          title: "Queen's Private Gym",
-          desc: 'Hey Student Manager! Get Struck by me. ✨',
-          placeholder: 'Paste text or Drag & Drop PDF here... (I will read it! 💅)',
-          submit: 'Moonstruck! ✨',
-          moonClass: 'text-pink-600 fill-pink-200'
-        },
-        N: {
-          bg: 'bg-gradient-to-br from-indigo-100 via-purple-50 to-white',
-          card: 'bg-white/90 backdrop-blur-md border-indigo-200 shadow-xl shadow-indigo-200/50',
-          text: 'text-gray-800',
-          accent: 'text-indigo-600',
-          button: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-indigo-300',
-          border: 'border-indigo-200 focus:border-indigo-400',
-          icon: icons.brain,
-          iconClass: 'w-6 h-6 text-indigo-500',
-          title: "Nerd's Cheat Lab",
-          desc: 'Hack your brain with logic.',
-          placeholder: 'Paste text or Drag & Drop PDF here... (Parsing Enabled 🧪)',
-          submit: 'Compile Data 🧪',
-          moonClass: 'text-indigo-600 fill-indigo-200'
-        },
-        S: {
-          bg: 'bg-gradient-to-br from-slate-200 via-gray-100 to-white',
-          card: 'bg-white border-slate-300 shadow-xl shadow-slate-300/50',
-          text: 'text-slate-900',
-          accent: 'text-slate-700',
-          button: 'bg-slate-800 text-white shadow-slate-400',
-          border: 'border-slate-300 focus:border-slate-500',
-          icon: icons.bookOpen,
-          iconClass: 'w-6 h-6 text-slate-700',
-          title: 'Drill Sergeant FM',
-          desc: 'No pain, no gain. Stick to the manual.',
-          placeholder: 'Paste text or Drag & Drop PDF here... (Text Extraction Ready)',
-          submit: 'Execute Training 🛡️',
-          moonClass: 'text-slate-800 fill-slate-200'
-        }
-      };
-      return themes[state.mode];
-    }
-
-    // ============================================================
-    // PDF EXTRACTION (Korean Support)
-    // ============================================================
-    async function extractTextFromPdf(file) {
-      if (!window.pdfjsLib) {
-        state.error = 'PDF 엔진 예열 중이야. 잠시만 기다려! 💅';
-        updateUI();
-        return;
-      }
-
-      state.extracting = true;
-      state.fileName = file.name;
-      state.error = '';
-      updateUI();
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        
-        const pdf = await pdfjsLib.getDocument({
-          data: arrayBuffer,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true
-        }).promise;
-
-        let fullText = '';
-        const LIMIT = 1500;
-        const maxPages = pdf.numPages > LIMIT ? LIMIT : pdf.numPages;
-
-        if (pdf.numPages > LIMIT) {
-          state.error = `Warning: ${LIMIT}페이지까지만 읽었어. (너무 길어서 뒤에는 잘랐어. 💅)`;
-        }
-
-        for (let i = 1; i <= maxPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(' ');
-          fullText += `[Page ${i}]\n${pageText}\n\n`;
-        }
-
-        state.content = fullText;
-      } catch (err) {
-        console.error(err);
-        state.error = 'PDF 읽다가 체했어. 혹시 이미지가 통으로 된 파일이니? (OCR 아님 주의 💅)';
-      } finally {
-        state.extracting = false;
-        updateUI();
-      }
-    }
-
-    // ============================================================
-    // FILE PROCESSING
-    // ============================================================
-    function processFile(file) {
-      if (!file) return;
-
-      if (file.type === 'application/pdf') {
-        extractTextFromPdf(file);
-        return;
-      }
-
-      if (
-        file.type === 'text/plain' ||
-        file.name.endsWith('.md') ||
-        file.name.endsWith('.txt') ||
-        file.name.endsWith('.csv')
-      ) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          state.content = e.target.result;
-          state.fileName = file.name;
-          state.error = '';
-          updateUI();
-        };
-        reader.readAsText(file);
-      } else {
-        state.error = 'Hey! PDF나 텍스트 파일만 가져와. 이상한 거 주지 말고. 🤷‍♀️';
-        updateUI();
-      }
-    }
-
-    // ============================================================
-    // API GENERATION LOGIC
-    // ============================================================
-    async function generateStudyMaterial() {
-      if (!state.content.trim()) {
-        if (state.mode === 'Q') {
-          state.error = 'Excuse me? Paper가 없잖아. Seriously? Moonstruck 당하고 싶어? 💅';
-        } else if (state.mode === 'N') {
-          state.error = 'Error 404: Void input detected.';
-        } else {
-          state.error = '훈련병! 텍스트 입력 누락. 즉시 시정하라.';
-        }
-        updateUI();
-        return;
-      }
-
-      state.loading = true;
-      state.error = '';
-      state.response = '';
-      updateUI();
-
-      // Demo Mode
-      if (!state.apiKey) {
-        setTimeout(() => {
-          state.response = MOCK_DATA[state.mode];
-          state.loading = false;
-          if (state.mode === 'Q') {
-            state.error = '✨ DEMO MODE Activated! (Key 없어서 가짜 데이터 보여줌) 💅';
-          } else {
-            state.error = '✨ DEMO MODE: Simulated Output.';
-          }
-          updateUI();
-        }, 1500);
-        return;
-      }
-
-      // Real API Call
-      try {
-        const modeInstruction =
-          state.mode === 'Q'
-            ? 'ACTIVATE [MODE Q: QUEEN GABEE] - Use Konglish.'
-            : state.mode === 'N'
-            ? 'ACTIVATE [MODE N: NERD/GENIUS]'
-            : 'ACTIVATE [MODE S: STANDARD]';
-
-        const finalPrompt = `${modeInstruction}\n\nHere is the study material:\n${state.content}\n\nGenerate the Excel table as per instructions.`;
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: finalPrompt }] }],
-              systemInstruction: { parts: [{ text: SYSTEM_PROMPT_TEMPLATE }] }
-            })
-          }
-        );
-
-        if (!response.ok) throw new Error('API Key Issue or Network Error');
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        state.response = text || 'No response generated.';
-      } catch (err) {
-        console.error(err);
-        state.error = `System Failure: ${err.message}`;
-      } finally {
-        state.loading = false;
-        updateUI();
-      }
-    }
-
-    // ============================================================
-    // DOWNLOAD HANDLERS
-    // ============================================================
-    function handleDownload(type) {
-      if (!state.response) return;
-
-      let content = state.response;
-      let mimeType = 'text/plain';
-      let extension = 'txt';
-      let bom = '';
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const filename = `Moonstruck_${state.mode}_${timestamp}`;
-
-      switch (type) {
-        case 'csv':
-          const lines = state.response.split('\n');
-          let csvData = [];
-          lines.forEach((line) => {
-            if (line.trim().startsWith('|') && !line.includes('---')) {
-              const row = line
-                .split('|')
-                .filter((_, i, arr) => i !== 0 && i !== arr.length - 1)
-                .map((cell) => `"${cell.trim().replace(/"/g, '""')}"`)
-                .join(',');
-              csvData.push(row);
+    <!-- 2. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              jua: ['Jua', 'sans-serif'],
+              sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
             }
-          });
-          content = csvData.join('\r\n');
-          mimeType = 'text/csv;charset=utf-8';
-          extension = 'csv';
-          bom = '\uFEFF';
-          break;
-        case 'md':
-          extension = 'md';
-          break;
-        case 'doc':
-          content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Study Material</title></head><body>${state.response.replace(
-            /\n/g,
-            '<br>'
-          )}</body></html>`;
-          mimeType = 'application/msword';
-          extension = 'doc';
-          break;
-        case 'pdf':
-          const printWindow = window.open('', '', 'height=600,width=800');
-          printWindow.document.write(
-            '<html><head><title>Study Material</title><style>body{font-family: sans-serif; white-space: pre-wrap;}</style></head><body>'
-          );
-          printWindow.document.write(`<pre>${state.response}</pre>`);
-          printWindow.document.write('</body></html>');
-          printWindow.document.close();
-          printWindow.print();
-          return;
-        default:
-          break;
-      }
-
-      const blob = new Blob([bom + content], { type: mimeType });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${filename}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    // ============================================================
-    // RENDER FUNCTIONS
-    // ============================================================
-    function renderBrandHeader() {
-      const theme = getTheme();
-      return `
-        <div class="mb-6 flex items-center gap-3 brand-logo animate-pulse cursor-default group">
-          <div class="relative">
-            <div class="w-10 h-10 transition-transform duration-500 group-hover:-rotate-12 ${theme.moonClass}">
-              ${icons.moon}
-            </div>
-            <div class="absolute -bottom-1 -right-2 w-6 h-6 animate-bounce text-yellow-400 fill-yellow-200">
-              ${icons.zap}
-            </div>
-          </div>
-          <div class="flex flex-col pl-2">
-            <h1 class="text-4xl sm:text-5xl font-black tracking-tighter leading-none ${theme.accent}">
-              Moonstruck!
-            </h1>
-            <span class="text-[12px] tracking-[0.2em] font-bold text-right opacity-60 ${state.mode === 'Q' ? 'text-pink-800' : 'text-slate-600'}">
-              Rise and Shine! ✨
-            </span>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderModeSelector() {
-      const theme = getTheme();
-      return `
-        <div class="flex bg-gray-100/50 p-1.5 rounded-full border border-gray-200 backdrop-blur-sm self-start sm:self-center">
-          ${['Q', 'N', 'S']
-            .map(
-              (m) => `
-            <button 
-              onclick="changeMode('${m}')"
-              class="px-4 py-2 rounded-full text-sm transition-all duration-300 tab-text ${
-                state.mode === m
-                  ? 'bg-white text-black shadow-md scale-105'
-                  : 'text-gray-400 hover:text-gray-600'
-              }"
-            >
-              ${m === 'Q' ? 'QUEEN 👑' : m === 'N' ? 'NERD 🤓' : 'FM 👮'}
-            </button>
-          `
-            )
-            .join('')}
-        </div>
-      `;
-    }
-
-    function renderApiKeyInput() {
-      const theme = getTheme();
-      return `
-        <div class="relative group">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span class="text-xs font-bold ui-text transition-colors ${
-              state.isDemo ? 'text-gray-400' : 'text-green-600'
-            }">
-              ${state.isDemo ? 'DEMO MODE' : 'LIVE MODE'}
-            </span>
-          </div>
-          <input
-            type="password"
-            placeholder="API Key (비워두면 Demo Mode ✨)"
-            class="w-full sm:w-1/2 bg-gray-50/50 border ${theme.border} text-gray-600 text-sm rounded-xl py-2.5 pl-24 pr-10 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all focus:ring-gray-400 ui-text"
-            value="${state.apiKey}"
-            oninput="updateApiKey(event.target.value)"
-          />
-          <div class="absolute inset-y-0 right-1/2 mr-3 flex items-center pointer-events-none">
-            ${state.isDemo ? icons.lock : icons.unlock}
-          </div>
-        </div>
-      `;
-    }
-
-    function renderTextarea() {
-      const theme = getTheme();
-      
-      if (state.extracting) {
-        return `
-          <div class="w-full min-h-[200px] rounded-2xl border bg-white/50 flex flex-col items-center justify-center ${theme.border}">
-            ${icons.loader}
-            <span class="font-bold font-jua text-gray-500 mt-2">PDF 읽는 중... (Wait a sec)</span>
-          </div>
-        `;
-      }
-
-      return `
-        <textarea
-          id="contentInput"
-          class="w-full min-h-[200px] p-6 rounded-2xl border bg-white/50 focus:bg-white focus:ring-2 focus:ring-opacity-20 transition-all resize-none text-sm leading-relaxed ${
-            theme.border
-          } ${
-            state.mode === 'Q'
-              ? 'focus:ring-pink-500'
-              : state.mode === 'N'
-              ? 'focus:ring-indigo-500'
-              : 'focus:ring-slate-500'
-          }"
-          placeholder="${theme.placeholder}"
-          oninput="updateContent(event.target.value)"
-        >${state.content}</textarea>
-      `;
-    }
-
-    function renderFileUploadButton() {
-      return `
-        <div class="absolute bottom-4 right-4 flex gap-2">
-          ${
-            state.fileName
-              ? `
-            <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-600 shadow-sm animate-fade-in-up">
-              ${icons.fileText}
-              <span class="max-w-[100px] truncate">${state.fileName}</span>
-              <button onclick="clearFile()" class="hover:text-red-500">
-                ${icons.x}
-              </button>
-            </div>
-          `
-              : ''
           }
-          <button
-            onclick="document.getElementById('fileInput').click()"
-            class="p-2 rounded-lg bg-white shadow-md border hover:scale-110 transition-transform ${
-              getTheme().border
-            } text-gray-500"
-            title="Upload Text/PDF"
-          >
-            ${icons.uploadCloud}
-          </button>
-          <input
-            type="file"
-            id="fileInput"
-            class="hidden"
-            accept=".txt,.md,.pdf,.csv"
-            onchange="handleFileSelect(event)"
-          />
-        </div>
-      `;
-    }
+        }
+      }
+    </script>
 
-    function renderSubmitButton() {
-      const theme = getTheme();
-      return `
-        <button
-          onclick="generateStudyMaterial()"
-          ${state.loading || state.extracting ? 'disabled' : ''}
-          class="w-full py-5 rounded-2xl text-xl shadow-lg transform transition-all active:scale-[0.98] flex justify-center items-center gap-3 ${
-            theme.button
-          } ${
-            state.loading || state.extracting
-              ? 'opacity-70 cursor-wait'
-              : 'hover:-translate-y-1'
-          }"
+    <!-- 3. React & ReactDOM (Stable Versions with Crossorigin) -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- 4. Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 5. PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
+      
+      .glass {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      
+      /* Mode Transitions */
+      body { transition: background 0.8s ease-in-out; }
+    </style>
+  </head>
+
+  <body class="antialiased min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useRef, useEffect } = React;
+      
+      // --- INTERNAL ICON SYSTEM (No External Dependency) ---
+      // Lucide 아이콘을 직접 SVG 컴포넌트로 구현하여 오류 원천 차단
+      const IconBase = ({ children, className, ...props }) => (
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          className={className}
+          {...props}
         >
-          ${
-            state.loading || state.extracting
-              ? `
-            <div class="spinner"></div>
-            <span class="tracking-widest text-sm ui-text">PROCESSING...</span>
-          `
-              : `
-            <div class="w-6 h-6">${icons.zap}</div>
-            <span class="tracking-wide ui-text">${
-              state.isDemo ? `${theme.submit} (DEMO)` : theme.submit
-            }</span>
-          `
+          {children}
+        </svg>
+      );
+
+      const Sparkles = (props) => <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></IconBase>;
+      const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+      const Skull = (props) => <IconBase {...props}><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></IconBase>;
+      const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>;
+      const Zap = (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>;
+      const Brain = (props) => <IconBase {...props}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></IconBase>;
+      const MessageSquare = (props) => <IconBase {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></IconBase>;
+      const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></IconBase>;
+      const FileJson = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1"/><path d="M14 12a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1"/></IconBase>;
+      const Printer = (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconBase>;
+      const FileType = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M9 12v-1h6v1"/><path d="M12 12v6"/></IconBase>;
+      const Moon = (props) => <IconBase {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></IconBase>;
+      const Lock = (props) => <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
+      const Unlock = (props) => <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></IconBase>;
+      const UploadCloud = (props) => <IconBase {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></IconBase>;
+      const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+      const Loader2 = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
+
+      // --- MOCK DATA ---
+      const MOCK_DATA = {
+        Q: `| Source | Topic | Question | Answer | 👑 Queen's Comment |\n|---|---|---|---|---|\n| pg.12 | 광합성 | 1. (OX) 광합성은 밤에만 일어난다? | X (낮에 일어남) | Excuse me? 식물도 잠은 자야지! 🤷‍♀️ 기본 상식 아니니? |\n| pg.15 | 미토콘드리아 | 2. (주관식) 세포의 에너지 공장은? | 미토콘드리아 | Focus Pocus! ✨ "미토"는 Power라고 외워. 안 외우면 해고야. |\n| pg.20 | DNA | 3. (객관식) DNA의 염기가 아닌 것은? (A,G,C,U) | U (Uracil) | U는 RNA 거잖아. Seriously? 족보 꼬이는 소리 하고 있네. 💅 |\n| pg.22 | 세포분열 | 4. (OX) 체세포 분열 시 염색체 수는 반감된다? | X (유지됨) | 반감은 생식세포야, 매니줠! 정신 안 차려? [싸늘한 눈빛] |\n| pg.30 | ATP | 5. (주관식) 생체 에너지 화폐는? | ATP | 돈(Money)이랑 같은 거야. 이거 없으면 너도 나도 굶어 죽어. 알겠니? |`,
+        N: `| Source | Topic | Question | Answer | Cheatsheet (Analogy) |\n|---|---|---|---|---|\n| Wiki | TCP/IP | 1. (Concept) TCP란 무엇인가? | 신뢰성 있는 전송 프로토콜 | 택배 기사가 "물건 잘 받았어요?" 확인하고 가는 것. (UDP는 문 앞에 던지고 감) |\n| Wiki | HTTP | 2. (Status) 404 에러의 의미는? | Not Found | 네가 찾던 그 페이지, '증발'했다는 뜻. 주소창 다시 확인해. |\n| Wiki | RAM | 3. (Hardware) RAM의 특징은? | 휘발성 메모리 | 칠판 지우개 같은 거야. 전원 끄면 싹 지워져. 영원한 건 없어. |\n| Wiki | CPU | 4. (Logic) CPU는 컴퓨터의 무엇인가? | 중앙 처리 장치 (뇌) | 오케스트라의 지휘자. 얘가 멈추면 음악(시스템)도 끝이야. |\n| Wiki | Binary | 5. (Math) 이진수 1010의 십진수 값은? | 10 | 손가락 열 개 펼쳐봐. 컴퓨터는 그걸 1과 0으로만 세는 천재 바보야. |`,
+        S: `| Source | Topic | Question | Answer (Contrast Reasoning) |\n|---|---|---|---|\n| Textbook | 한국사 | 1. 임진왜란 발발 연도는? | 1592년 | 1598년은 종전 연도임. 혼동 주의. |\n| Textbook | 경제 | 2. 기회비용의 정의는? | 포기한 대안 중 최선의 가치 | 모든 대안의 합이 아님. 가장 큰 하나만 계산함. |\n| Textbook | 화학 | 3. 원자번호 1번 원소는? | 수소 (H) | 헬륨(He)은 2번임. 주기율표 1족 1주기 기억할 것. |\n| Textbook | 물리 | 4. F=ma에서 a는? | 가속도 | 속도가 아님. 힘은 질량과 가속도의 곱임. |\n| Textbook | 윤리 | 5. 공리주의의 핵심 원칙은? | 최대 다수의 최대 행복 | 의무론(칸트)과 반대됨. 결과 중심주의임. |`,
+      };
+
+      // --- SYSTEM PROMPT ---
+      const SYSTEM_PROMPT_TEMPLATE = `
+      *** SYSTEM INSTRUCTION MANUAL ***
+      [META-INSTRUCTION]
+      This is the MASTER OPERATIONAL PROTOCOL.
+
+      ### 1. MODE DETECTION & TRIGGER
+      Analyze the user's selection to determine the active [MODE].
+      * [MODE Q: QUEEN GABEE] (Spicy Roast & Training)
+        - Persona: A confident but slightly ditzy "Diva" (Beakchimi). 
+        - Tone: Heavy use of "Konglish" and unnecessary English words.
+        - key phrases: "Excuse me?", "Basically...", "You know?", "Student Manager!", "Literally", "Honestly", "I'm Moonstruck!".
+        - Attitude: Treats the user like an incompetent "Student Manager".
+        - Goal: Scold the user for not knowing basics, but in a funny, dramatic way.
+        - Style: "Hey Student Manager! Moonstruck 당할 준비 됐니? ✨ 이거 외워. 안 외우면 해고야. 💅"
+      * [MODE N: NERD/GENIUS] (Analogy & Cheatsheet)
+        - Persona: "Crazy Genius Mentor".
+        - Tone: Witty, intuitive, "Let me hack this for you."
+        - Goal: Provide vivid analogies/mnemonics.
+      * [MODE S: STANDARD] (Strict Exam Prep)
+        - Persona: "Relentless Drill Sergeant".
+        - Tone: Dry, professional, strictly academic.
+        - Goal: Maximize question quantity.
+
+      ### 2. EXECUTION RULES
+      1. "Nano-Slicing": 1 Fact = 1 Row. At least 10 rows per concept.
+      2. Pagination: Batch of 10 rows.
+      3. Language: Default to Korean unless English is requested.
+
+      ### 3. OUTPUT FORMAT
+      Must generate a Markdown Table appropriate for the mode.
+      - Mode Q: | Source | Topic | Question (Start with number) | Answer | 👑 Queen's Comment (Konglish) |
+      - Mode N: | Source | Topic | Question (Start with number) | Answer | Cheatsheet (Analogy) |
+      - Mode S: | Source | Topic | Question (Start with number) | Answer (Contrast Reasoning) |
+
+      ### 4. OUTRO
+      End with the specific signature for the mode (Guillotine, Cheat Code, or Kill List).
+      `;
+
+      const App = () => {
+        const [apiKey, setApiKey] = useState("");
+        const [content, setContent] = useState("");
+        const [fileName, setFileName] = useState("");
+        const [mode, setMode] = useState("S"); // S, N, Q
+        const [response, setResponse] = useState("");
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState("");
+        const [isDemo, setIsDemo] = useState(true);
+        const [isDragging, setIsDragging] = useState(false);
+        const [pdfLibReady, setPdfLibReady] = useState(false);
+        const [extracting, setExtracting] = useState(false);
+
+        const resultRef = useRef(null);
+        const fileInputRef = useRef(null);
+
+        // --- INITIALIZATION ---
+        useEffect(() => {
+          setIsDemo(!apiKey);
+        }, [apiKey]);
+
+        useEffect(() => {
+          const checkPdfLib = () => {
+            if (window.pdfjsLib) {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+              setPdfLibReady(true);
+              console.log("PDF Engine Ready 💅");
+            } else {
+              setTimeout(checkPdfLib, 500);
+            }
+          };
+          checkPdfLib();
+        }, []);
+
+        const handleInputCheck = (e) => {
+          setContent(e.target.value);
+        };
+
+        // --- PDF LOGIC ---
+        const extractTextFromPdf = async (file) => {
+          if (!pdfLibReady) {
+            setError("PDF 엔진 예열 중... 잠시만 기다려! (Engine Warming up 💅)");
+            return;
           }
-        </button>
-      `;
-    }
 
-    function renderError() {
-      if (!state.error) return '';
-      return `
-        <div class="p-4 text-sm font-semibold rounded-xl border flex items-center gap-3 animate-bounce ui-text ${
-          state.error.includes('DEMO')
-            ? 'bg-blue-50 text-blue-700 border-blue-100'
-            : 'bg-red-50 text-red-600 border-red-100'
-        }">
-          ${icons.sparkles}
-          ${state.error}
-        </div>
-      `;
-    }
+          setExtracting(true);
+          setFileName(file.name);
+          setError("");
 
-    function renderResult() {
-      if (!state.response) return '';
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({
+              data: arrayBuffer,
+              cMapUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/",
+              cMapPacked: true,
+            }).promise;
 
-      return `
-        <div class="w-full max-w-4xl mt-8 animation-fade-in-up">
-          <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-            <div class="px-8 py-5 border-b flex flex-col sm:flex-row justify-between items-center gap-4 ${
-              state.mode === 'Q' ? 'bg-pink-50/50' : 'bg-gray-50/50'
-            }">
-              <h2 class="font-bold text-gray-700 flex items-center gap-2 text-lg">
-                ${icons.messageSquare}
-                <span>Result Table</span>
-              </h2>
-              <div class="flex flex-wrap justify-center gap-2">
-                <button onclick="handleDownload('csv')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors ui-text text-sm font-bold">
-                  ${icons.fileText} CSV
-                </button>
-                <button onclick="handleDownload('doc')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors ui-text text-sm font-bold">
-                  ${icons.download} Word
-                </button>
-                <button onclick="handleDownload('md')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors ui-text text-sm font-bold">
-                  ${icons.download} MD
-                </button>
-                <button onclick="handleDownload('pdf')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors ui-text text-sm font-bold">
-                  ${icons.printer} PDF
-                </button>
+            let fullText = "";
+            const LIMIT = 1500;
+            const maxPages = pdf.numPages > LIMIT ? LIMIT : pdf.numPages;
+
+            if (pdf.numPages > LIMIT) {
+              setError(`Warning: ${LIMIT}페이지까지만 읽었어. Too heavy! 💅`);
+            }
+
+            for (let i = 1; i <= maxPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map((item) => item.str).join(" ");
+              fullText += `[Page ${i}]\n${pageText}\n\n`;
+            }
+
+            setContent(fullText);
+          } catch (err) {
+            console.error(err);
+            setError("PDF 읽기 실패! 텍스트가 아니라 이미지 스캔본 아냐? (Check it out 💅)");
+          } finally {
+            setExtracting(false);
+          }
+        };
+
+        const processFile = (file) => {
+          if (!file) return;
+          if (file.type === "application/pdf") {
+            extractTextFromPdf(file);
+            return;
+          }
+          if (
+            file.type === "text/plain" ||
+            file.name.endsWith(".md") ||
+            file.name.endsWith(".txt") ||
+            file.name.endsWith(".csv")
+          ) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              setContent(e.target.result);
+              setFileName(file.name);
+              setError("");
+            };
+            reader.readAsText(file);
+          } else {
+            setError("Hey! PDF나 텍스트 파일만 가져와. Weird file detected. 🤷‍♀️");
+          }
+        };
+
+        const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+        const handleDragLeave = () => { setIsDragging(false); };
+        const handleDrop = (e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            processFile(e.dataTransfer.files[0]);
+          }
+        };
+
+        const clearFile = () => {
+          setFileName("");
+          setContent("");
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        };
+
+        // --- API CALL ---
+        const generateStudyMaterial = async () => {
+          if (!content.trim()) {
+            const msg = mode === "Q" ? "Excuse me? Paper가 없잖아! Moonstruck 당하고 싶어? 💅"
+                      : mode === "N" ? "Null Input Exception. Please provide data."
+                      : "훈련병! 텍스트 입력 누락. 즉시 시정하라.";
+            setError(msg);
+            return;
+          }
+
+          setLoading(true);
+          setError("");
+          setResponse("");
+
+          // Demo Mode
+          if (!apiKey) {
+            setTimeout(() => {
+              setResponse(MOCK_DATA[mode]);
+              setLoading(false);
+              const msg = mode === "Q" ? "✨ DEMO MODE: Key 없어서 가짜 데이터 보여줌! 💅"
+                        : "✨ DEMO MODE: Simulated Output Active.";
+              setError(msg);
+              // Scroll to result
+              setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+            }, 1500);
+            return;
+          }
+
+          // Real API
+          try {
+            const modeInstruction = mode === "Q" ? "ACTIVATE [MODE Q: QUEEN GABEE] - Use Konglish."
+                                : mode === "N" ? "ACTIVATE [MODE N: NERD/GENIUS]"
+                                : "ACTIVATE [MODE S: STANDARD]";
+
+            const finalPrompt = `${modeInstruction}\n\nHere is the study material:\n${content}\n\nGenerate the Excel table as per instructions.`;
+
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: finalPrompt }] }],
+                  systemInstruction: { parts: [{ text: SYSTEM_PROMPT_TEMPLATE }] },
+                }),
+              }
+            );
+
+            if (!res.ok) throw new Error("API Key Issue or Network Error");
+
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            setResponse(text || "No response generated.");
+            
+            // Scroll to result
+            setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+          } catch (err) {
+            console.error(err);
+            setError(`System Failure: ${err.message}`);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        // --- DOWNLOAD ---
+        const handleDownload = (type) => {
+          if (!response) return;
+          let contentStr = response;
+          let mimeType = "text/plain";
+          let extension = "txt";
+          let bom = "";
+          const timestamp = new Date().toISOString().slice(0, 10);
+          const filename = `Moonstruck_${mode}_${timestamp}`;
+
+          switch (type) {
+            case "csv":
+              const lines = response.split("\n");
+              let csvData = [];
+              lines.forEach((line) => {
+                if (line.trim().startsWith("|") && !line.includes("---")) {
+                  const row = line.split("|")
+                    .filter((_, i, arr) => i !== 0 && i !== arr.length - 1)
+                    .map((cell) => `"${cell.trim().replace(/"/g, '""')}"`)
+                    .join(",");
+                  csvData.push(row);
+                }
+              });
+              contentStr = csvData.join("\r\n");
+              mimeType = "text/csv;charset=utf-8";
+              extension = "csv";
+              bom = "\uFEFF";
+              break;
+            case "md":
+              extension = "md";
+              break;
+            case "doc":
+              contentStr = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Study Material</title></head><body>${response.replace(/\n/g, "<br>")}</body></html>`;
+              mimeType = "application/msword";
+              extension = "doc";
+              break;
+            case "pdf":
+              const printWindow = window.open("", "", "height=600,width=800");
+              printWindow.document.write("<html><head><title>Print</title><style>body{font-family: sans-serif; white-space: pre-wrap;}</style></head><body>");
+              printWindow.document.write(`<pre>${response}</pre>`);
+              printWindow.document.write("</body></html>");
+              printWindow.document.close();
+              printWindow.print();
+              return;
+            default: break;
+          }
+          const blob = new Blob([bom + contentStr], { type: mimeType });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${filename}.${extension}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        // --- THEME LOGIC ---
+        const getTheme = () => {
+          switch (mode) {
+            case "Q":
+              return {
+                bg: "bg-gradient-to-br from-[#FFDEE9] via-[#B5FFFC] to-[#FFFFFF]", // Soft cotton candy
+                bgOverlay: "from-pink-100 via-rose-50 to-white",
+                card: "bg-white/60 backdrop-blur-xl border-pink-200 shadow-xl shadow-pink-300/40",
+                text: "text-gray-800",
+                accent: "text-pink-600",
+                button: "bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-pink-300 hover:shadow-pink-400",
+                border: "border-pink-200 focus:border-pink-400",
+                icon: <Sparkles className="w-6 h-6 text-pink-500 animate-pulse-slow" />,
+                title: "Queen's Private Gym",
+                desc: "Hey Student Manager! Get Struck by me. ✨",
+                placeholder: "Paste text or Drag & Drop PDF here... (I will read it! 💅)",
+                submit: "Moonstruck! ✨",
+                selection: "ring-pink-400 bg-pink-50",
+                tagColor: "bg-pink-100 text-pink-700"
+              };
+            case "N":
+              return {
+                bg: "bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-800", // Dark cyber
+                bgOverlay: "from-indigo-100 via-purple-50 to-white",
+                card: "bg-slate-900/80 backdrop-blur-xl border-indigo-500/30 shadow-2xl shadow-indigo-500/20 text-indigo-100",
+                text: "text-indigo-50",
+                accent: "text-indigo-300",
+                button: "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-indigo-900 hover:shadow-indigo-500/50",
+                border: "border-indigo-500/30 focus:border-indigo-400 bg-slate-800/50 text-white placeholder-gray-400",
+                icon: <Brain className="w-6 h-6 text-indigo-400" />,
+                title: "Nerd's Cheat Lab",
+                desc: "Hack your brain with logic. System ready.",
+                placeholder: "Input Data Stream or Drop PDF... (Parsing Protocol Enabled 🧪)",
+                submit: "Compile Data 🧪",
+                selection: "ring-indigo-500 bg-indigo-900/50",
+                tagColor: "bg-indigo-900 text-indigo-300 border border-indigo-700"
+              };
+            default: // S
+              return {
+                bg: "bg-gradient-to-br from-gray-200 via-gray-100 to-white",
+                bgOverlay: "from-slate-200 via-gray-100 to-white",
+                card: "bg-white border-slate-300 shadow-xl shadow-slate-400/20",
+                text: "text-slate-900",
+                accent: "text-slate-800",
+                button: "bg-slate-800 text-white shadow-slate-400 hover:bg-slate-900",
+                border: "border-slate-300 focus:border-slate-500 bg-white",
+                icon: <BookOpen className="w-6 h-6 text-slate-800" />,
+                title: "Drill Sergeant FM",
+                desc: "No pain, no gain. Stick to the manual.",
+                placeholder: "Paste text or Drag & Drop PDF here... (Text Extraction Ready)",
+                submit: "Execute Training 🛡️",
+                selection: "ring-slate-400 bg-slate-100",
+                tagColor: "bg-slate-200 text-slate-700"
+              };
+          }
+        };
+
+        const theme = getTheme();
+        const isDark = mode === "N";
+
+        return (
+          <div className={`min-h-screen transition-all duration-700 flex flex-col items-center justify-center p-4 sm:p-6 md:p-12 ${theme.bg}`}>
+            
+            {/* --- BRAND HEADER --- */}
+            <div className="mb-8 flex items-center gap-3 animate-fade-in-up cursor-default group select-none">
+              <div className="relative">
+                <Moon
+                  className={`w-10 h-10 transition-transform duration-500 group-hover:-rotate-12 ${
+                    mode === "Q" ? "text-pink-600 fill-pink-200" 
+                    : mode === "N" ? "text-indigo-400 fill-indigo-900" 
+                    : "text-slate-800 fill-slate-200"
+                  }`}
+                  strokeWidth={2.5}
+                />
+                <Zap
+                  className={`absolute -bottom-1 -right-2 w-6 h-6 animate-bounce ${
+                    mode === "Q" ? "text-yellow-400 fill-yellow-100" 
+                    : "text-yellow-400 fill-yellow-200"
+                  }`}
+                  strokeWidth={3}
+                />
+              </div>
+              <div className="flex flex-col pl-2">
+                <h1 className={`font-jua text-4xl sm:text-5xl leading-none tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                  <span className={mode === "Q" ? "text-pink-600" : mode==="N" ? "text-indigo-400" : ""}>Moon</span>struck!
+                </h1>
+                <span className={`text-[11px] tracking-[0.25em] font-bold text-right uppercase opacity-70 ${isDark ? 'text-indigo-300' : 'text-slate-500'}`}>
+                  Rise and Shine ✨
+                </span>
               </div>
             </div>
-            <div class="p-8 overflow-x-auto bg-white">
-              <pre class="whitespace-pre-wrap font-mono text-sm leading-7 text-gray-600">${state.response}</pre>
-            </div>
-          </div>
-        </div>
-      `;
-    }
 
-    // ============================================================
-    // MAIN RENDER FUNCTION
-    // ============================================================
-    function render() {
-      const theme = getTheme();
-      const app = document.getElementById('app');
-      
-      app.innerHTML = `
-        <div class="min-h-screen transition-all duration-700 ${theme.bg} p-4 sm:p-8 flex flex-col items-center justify-center">
-          ${renderBrandHeader()}
-          
-          <div class="w-full max-w-4xl rounded-3xl p-6 sm:p-10 transition-all duration-500 border ${theme.card}">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-              <div class="flex items-center gap-4">
-                <div class="p-3 rounded-2xl bg-white shadow-sm border ${theme.border}">
-                  <div class="${theme.iconClass}">${theme.icon}</div>
-                </div>
-                <div>
-                  <h1 class="text-3xl tracking-tight ${theme.accent}">${theme.title}</h1>
-                  <p class="text-sm font-medium text-gray-400 mt-1 flex items-center gap-2 ui-text">
-                    ${theme.desc}
-                  </p>
-                </div>
-              </div>
-              ${renderModeSelector()}
-            </div>
-
-            <div class="space-y-6">
-              ${renderApiKeyInput()}
+            {/* --- MAIN CARD --- */}
+            <div className={`w-full max-w-3xl rounded-[2rem] p-6 sm:p-10 transition-all duration-500 border ${theme.card}`}>
               
-              <div class="relative space-y-2">
-                <div class="flex justify-between items-center text-xs font-bold px-2 ui-text transition-colors ${
-                  state.isDragging ? 'text-pink-500' : 'text-gray-400'
-                }">
-                  <span>INPUT DATA</span>
-                  <span>${state.isDragging ? 'DROP IT LIKE IT\'S HOT 🔥' : 'DRAG & DROP PDF OR TEXT'}</span>
+              {/* Header & Tabs */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3.5 rounded-2xl shadow-sm border transition-colors duration-300 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+                    {theme.icon}
+                  </div>
+                  <div>
+                    <h2 className={`font-jua text-2xl sm:text-3xl tracking-tight ${theme.accent}`}>
+                      {theme.title}
+                    </h2>
+                    <p className={`text-sm font-medium mt-0.5 flex items-center gap-2 ${isDark ? 'text-slate-400' : 'text-gray-400'}`}>
+                      {theme.desc}
+                    </p>
+                  </div>
                 </div>
-                
-                <div 
-                  id="dropZone"
-                  class="relative group rounded-2xl transition-all duration-300 ${
-                    state.isDragging ? 'scale-[1.01] ring-2 ring-pink-400 shadow-lg' : ''
-                  }"
-                >
-                  ${renderTextarea()}
-                  ${
-                    state.isDragging
-                      ? `
-                    <div class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10 animate-pulse">
-                      ${icons.uploadCloud}
-                      <span class="text-xl font-bold font-jua text-gray-600 mt-2">파일을 놓으세요! (Drop Here)</span>
-                    </div>
-                  `
-                      : ''
-                  }
-                  ${renderFileUploadButton()}
+
+                <div className={`flex p-1.5 rounded-full border backdrop-blur-sm self-start md:self-center ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-gray-100/80 border-gray-200'}`}>
+                  {[
+                    {id:"Q", label:"QUEEN 👑"}, 
+                    {id:"N", label:"NERD 🤓"}, 
+                    {id:"S", label:"FM 👮"}
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setMode(m.id)}
+                      className={`font-jua px-4 py-2 rounded-full text-sm transition-all duration-300 ${
+                        mode === m.id
+                          ? `${isDark ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'bg-white text-black shadow-md'} scale-105`
+                          : `${isDark ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              ${renderSubmitButton()}
-              ${renderError()}
+              {/* --- INPUT AREA --- */}
+              <div className="space-y-6">
+                
+                {/* API Key */}
+                <div className="relative group">
+                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isDemo ? (isDark ? 'bg-slate-700 text-gray-400' : 'bg-gray-200 text-gray-500') : 'bg-green-100 text-green-700'}`}>
+                      {isDemo ? "DEMO" : "LIVE"}
+                    </span>
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="API Key (Optional for Demo)"
+                    className={`w-full sm:w-1/2 text-sm rounded-xl py-3 pl-16 pr-10 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all ${theme.border} ${isDark ? 'focus:ring-indigo-400' : ''}`}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <div className="absolute inset-y-0 left-[calc(50%-2rem)] sm:left-[calc(50%-2.5rem)] flex items-center pointer-events-none">
+                     {isDemo ? <Lock className="w-4 h-4 text-gray-400 opacity-50"/> : <Unlock className="w-4 h-4 text-green-500"/>}
+                  </div>
+                </div>
+
+                {/* Dropzone & Textarea */}
+                <div className="relative space-y-2">
+                  <div className={`flex justify-between items-center text-xs font-bold px-2 transition-colors ${isDragging ? (mode==='Q'?'text-pink-500':'text-indigo-400') : (isDark?'text-slate-500':'text-gray-400')}`}>
+                    <span>INPUT SOURCE</span>
+                    <span>{isDragging ? "DROP IT LIKE IT'S HOT 🔥" : "TEXT OR PDF"}</span>
+                  </div>
+
+                  <div
+                    className={`relative group rounded-2xl transition-all duration-300 overflow-hidden ${isDragging ? `scale-[1.01] ring-2 ${mode==='Q'?'ring-pink-400':'ring-indigo-400'}` : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {extracting ? (
+                      <div className={`w-full min-h-[220px] rounded-2xl border flex flex-col items-center justify-center ${theme.border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50/50'}`}>
+                        <Loader2 className={`w-10 h-10 animate-spin mb-3 ${mode === "Q" ? "text-pink-500" : "text-indigo-500"}`} />
+                        <span className={`font-jua text-lg ${isDark?'text-slate-300':'text-gray-500'}`}>
+                          Reading PDF... <span className="text-xs opacity-70 block text-center font-sans mt-1">Wait a sec 💅</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <textarea
+                        className={`w-full min-h-[220px] p-6 rounded-2xl border resize-none text-sm leading-relaxed transition-all scrollbar-hide
+                          ${theme.border}
+                          ${mode === "Q" ? "focus:ring-2 focus:ring-pink-200" : mode === "N" ? "focus:ring-2 focus:ring-indigo-500/50" : "focus:ring-2 focus:ring-slate-300"}
+                        `}
+                        placeholder={theme.placeholder}
+                        onChange={handleInputCheck}
+                        value={content}
+                      ></textarea>
+                    )}
+
+                    {/* Drag Overlay */}
+                    {isDragging && (
+                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 animate-pulse">
+                        <UploadCloud className={`w-12 h-12 mb-2 ${mode === "Q" ? "text-pink-500" : "text-indigo-600"}`} />
+                        <span className="text-xl font-jua text-gray-800">Drop File Here!</span>
+                      </div>
+                    )}
+
+                    {/* File Tag & Upload Button */}
+                    <div className="absolute bottom-4 right-4 flex gap-2 z-10">
+                      {fileName && (
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm animate-fade-in-up ${theme.tagColor}`}>
+                          <FileText className="w-3 h-3" />
+                          <span className="max-w-[120px] truncate">{fileName}</span>
+                          <button onClick={clearFile} className="hover:opacity-60"><X className="w-3 h-3" /></button>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`p-2 rounded-lg shadow-md border hover:scale-105 transition-transform ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-500'}`}
+                        title="Upload"
+                      >
+                        <UploadCloud className="w-5 h-5" />
+                      </button>
+                      <input type="file" ref={fileInputRef} className="hidden" accept=".txt,.md,.pdf,.csv" onChange={(e) => processFile(e.target.files[0])} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  onClick={generateStudyMaterial}
+                  disabled={loading || extracting}
+                  className={`w-full py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-jua shadow-lg transform transition-all active:scale-[0.98] flex justify-center items-center gap-3 group
+                    ${theme.button}
+                    ${loading || extracting ? "opacity-70 cursor-wait" : "hover:-translate-y-1"}
+                  `}
+                >
+                  {loading || extracting ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span className="tracking-widest text-sm font-sans font-bold">PROCESSING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className={`w-6 h-6 ${mode==='Q'?'group-hover:text-yellow-300 transition-colors':''}`} fill="currentColor" />
+                      <span className="tracking-wide">{isDemo ? `${theme.submit} (DEMO)` : theme.submit}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Toast Message */}
+                {error && (
+                  <div className={`p-4 text-sm font-bold rounded-xl border flex items-center gap-3 animate-fade-in-up ${error.includes("DEMO") ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-red-50 text-red-600 border-red-100"}`}>
+                    <Sparkles className="w-5 h-5 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* --- RESULTS SECTION --- */}
+            {response && (
+              <div ref={resultRef} className="w-full max-w-3xl mt-8 pb-20 animate-fade-in-up">
+                <div className={`rounded-[2rem] shadow-2xl overflow-hidden border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'}`}>
+                  
+                  {/* Toolbar */}
+                  <div className={`px-6 py-4 border-b flex flex-wrap justify-between items-center gap-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50/80 border-gray-100'}`}>
+                    <h2 className={`font-bold font-jua flex items-center gap-2 text-lg ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>
+                      <MessageSquare className="w-5 h-5 opacity-50" />
+                      <span>Result Table</span>
+                    </h2>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => handleDownload("csv")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors text-xs font-bold">
+                        <FileText className="w-3.5 h-3.5" /> CSV
+                      </button>
+                      <button onClick={() => handleDownload("doc")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-xs font-bold">
+                        <FileType className="w-3.5 h-3.5" /> Word
+                      </button>
+                      <button onClick={() => handleDownload("pdf")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors text-xs font-bold">
+                        <Printer className="w-3.5 h-3.5" /> PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className={`p-6 sm:p-8 overflow-x-auto ${isDark ? 'bg-slate-900 text-slate-300' : 'bg-white text-gray-600'}`}>
+                    <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                      {response}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <footer className="fixed bottom-4 text-center w-full pointer-events-none">
+               <span className={`inline-block px-4 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase backdrop-blur-md ${isDark ? 'text-slate-500 bg-slate-900/50' : 'text-slate-400 bg-white/50'}`}>
+                 AI EdTech Portfolio | Prototype v2.8
+               </span>
+            </footer>
+
           </div>
+        );
+      };
 
-          ${renderResult()}
-
-          <footer class="mt-12 text-center text-xs font-medium text-gray-400 tracking-widest uppercase opacity-60 ui-text">
-            AI EdTech Portfolio | Prototype v2.7 (Korean PDF Support)
-          </footer>
-        </div>
-      `;
-
-      // Re-attach Drag & Drop Listeners
-      const dropZone = document.getElementById('dropZone');
-      if (dropZone) {
-        dropZone.addEventListener('dragover', handleDragOver);
-        dropZone.addEventListener('dragleave', handleDragLeave);
-        dropZone.addEventListener('drop', handleDrop);
-      }
-    }
-
-    // ============================================================
-    // EVENT HANDLERS (Global Scope for inline onclick)
-    // ============================================================
-    function updateApiKey(value) {
-      state.apiKey = value;
-      state.isDemo = !value;
-      updateUI();
-    }
-
-    function updateContent(value) {
-      state.content = value;
-    }
-
-    function changeMode(mode) {
-      state.mode = mode;
-      updateUI();
-    }
-
-    function clearFile() {
-      state.fileName = '';
-      state.content = '';
-      updateUI();
-    }
-
-    function handleFileSelect(event) {
-      processFile(event.target.files[0]);
-    }
-
-    function handleDragOver(e) {
-      e.preventDefault();
-      state.isDragging = true;
-      updateUI();
-    }
-
-    function handleDragLeave() {
-      state.isDragging = false;
-      updateUI();
-    }
-
-    function handleDrop(e) {
-      e.preventDefault();
-      state.isDragging = false;
-      processFile(e.dataTransfer.files[0]);
-    }
-
-    function updateUI() {
-      render();
-    }
-
-    // ============================================================
-    // INITIALIZE APP
-    // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      render();
-    });
-  </script>
-</body>
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
 </html>
