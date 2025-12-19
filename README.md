@@ -1,5 +1,3 @@
-
-[Moonstruck.md](https://github.com/user-attachments/files/24261881/Moonstruck.md)
 # **🌙 Moonstruck\! (AI Study Material Generator)**
 
 **"Rise and Shine\! ✨"** \> **Client-side AI PDF Parsing & Study Table Generator**
