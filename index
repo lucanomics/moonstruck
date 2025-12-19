@@ -1,0 +1,552 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Sparkles, BookOpen, Skull, Download, Zap, Brain, MessageSquare, FileText, FileJson, Printer, FileType, Moon, Lock, Unlock, UploadCloud, X, Loader2 } from 'lucide-react';
+
+// --- MOCK DATA (For Demo Mode) ---
+const MOCK_DATA = {
+  Q: `| Source | Topic | Question | Answer | 👑 Queen's Comment |\n|---|---|---|---|---|\n| pg.12 | 광합성 | 1. (OX) 광합성은 밤에만 일어난다? | X (낮에 일어남) | Excuse me? 식물도 잠은 자야지! 🤷‍♀️ 기본 상식 아니니? |\n| pg.15 | 미토콘드리아 | 2. (주관식) 세포의 에너지 공장은? | 미토콘드리아 | Focus Pocus! ✨ "미토"는 Power라고 외워. 안 외우면 해고야. |\n| pg.20 | DNA | 3. (객관식) DNA의 염기가 아닌 것은? (A,G,C,U) | U (Uracil) | U는 RNA 거잖아. Seriously? 족보 꼬이는 소리 하고 있네. 💅 |\n| pg.22 | 세포분열 | 4. (OX) 체세포 분열 시 염색체 수는 반감된다? | X (유지됨) | 반감은 생식세포야, 매니줠! 정신 안 차려? [싸늘한 눈빛] |\n| pg.30 | ATP | 5. (주관식) 생체 에너지 화폐는? | ATP | 돈(Money)이랑 같은 거야. 이거 없으면 너도 나도 굶어 죽어. 알겠니? |`,
+  N: `| Source | Topic | Question | Answer | Cheatsheet (Analogy) |\n|---|---|---|---|---|\n| Wiki | TCP/IP | 1. (Concept) TCP란 무엇인가? | 신뢰성 있는 전송 프로토콜 | 택배 기사가 "물건 잘 받았어요?" 확인하고 가는 것. (UDP는 문 앞에 던지고 감) |\n| Wiki | HTTP | 2. (Status) 404 에러의 의미는? | Not Found | 네가 찾던 그 페이지, '증발'했다는 뜻. 주소창 다시 확인해. |\n| Wiki | RAM | 3. (Hardware) RAM의 특징은? | 휘발성 메모리 | 칠판 지우개 같은 거야. 전원 끄면 싹 지워져. 영원한 건 없어. |\n| Wiki | CPU | 4. (Logic) CPU는 컴퓨터의 무엇인가? | 중앙 처리 장치 (뇌) | 오케스트라의 지휘자. 얘가 멈추면 음악(시스템)도 끝이야. |\n| Wiki | Binary | 5. (Math) 이진수 1010의 십진수 값은? | 10 | 손가락 열 개 펼쳐봐. 컴퓨터는 그걸 1과 0으로만 세는 천재 바보야. |`,
+  S: `| Source | Topic | Question | Answer (Contrast Reasoning) |\n|---|---|---|---|\n| Textbook | 한국사 | 1. 임진왜란 발발 연도는? | 1592년 | 1598년은 종전 연도임. 혼동 주의. |\n| Textbook | 경제 | 2. 기회비용의 정의는? | 포기한 대안 중 최선의 가치 | 모든 대안의 합이 아님. 가장 큰 하나만 계산함. |\n| Textbook | 화학 | 3. 원자번호 1번 원소는? | 수소 (H) | 헬륨(He)은 2번임. 주기율표 1족 1주기 기억할 것. |\n| Textbook | 물리 | 4. F=ma에서 a는? | 가속도 | 속도가 아님. 힘은 질량과 가속도의 곱임. |\n| Textbook | 윤리 | 5. 공리주의의 핵심 원칙은? | 최대 다수의 최대 행복 | 의무론(칸트)과 반대됨. 결과 중심주의임. |`
+};
+
+// --- SYSTEM PROMPT ---
+const SYSTEM_PROMPT_TEMPLATE = `
+*** SYSTEM INSTRUCTION MANUAL ***
+[META-INSTRUCTION]
+This is the MASTER OPERATIONAL PROTOCOL.
+
+### 1. MODE DETECTION & TRIGGER
+Analyze the user's selection to determine the active [MODE].
+* [MODE Q: QUEEN GABEE] (Spicy Roast & Training)
+  - Persona: A confident but slightly ditzy "Diva" (Beakchimi). 
+  - Tone: Heavy use of "Konglish" and unnecessary English words.
+  - key phrases: "Excuse me?", "Basically...", "You know?", "Student Manager!", "Literally", "Honestly", "I'm Moonstruck!".
+  - Attitude: Treats the user like an incompetent "Student Manager".
+  - Goal: Scold the user for not knowing basics, but in a funny, dramatic way.
+  - Style: "Hey Student Manager! Moonstruck 당할 준비 됐니? ✨ 이거 외워. 안 외우면 해고야. 💅"
+* [MODE N: NERD/GENIUS] (Analogy & Cheatsheet)
+  - Persona: "Crazy Genius Mentor".
+  - Tone: Witty, intuitive, "Let me hack this for you."
+  - Goal: Provide vivid analogies/mnemonics.
+* [MODE S: STANDARD] (Strict Exam Prep)
+  - Persona: "Relentless Drill Sergeant".
+  - Tone: Dry, professional, strictly academic.
+  - Goal: Maximize question quantity.
+
+### 2. EXECUTION RULES
+1. "Nano-Slicing": 1 Fact = 1 Row. At least 10 rows per concept.
+2. Pagination: Batch of 10 rows.
+3. Language: Default to Korean unless English is requested.
+
+### 3. OUTPUT FORMAT
+Must generate a Markdown Table appropriate for the mode.
+- Mode Q: | Source | Topic | Question (Start with number) | Answer | 👑 Queen's Comment (Konglish) |
+- Mode N: | Source | Topic | Question (Start with number) | Answer | Cheatsheet (Analogy) |
+- Mode S: | Source | Topic | Question (Start with number) | Answer (Contrast Reasoning) |
+
+### 4. OUTRO
+End with the specific signature for the mode (Guillotine, Cheat Code, or Kill List).
+`;
+
+const App = () => {
+  const [apiKey, setApiKey] = useState('');
+  const [content, setContent] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [mode, setMode] = useState('S'); 
+  const [response, setResponse] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isDemo, setIsDemo] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [pdfLibReady, setPdfLibReady] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  
+  const resultRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // --- INITIALIZATION: Load PDF.js from CDN ---
+  useEffect(() => {
+    setIsDemo(!apiKey);
+  }, [apiKey]);
+
+  useEffect(() => {
+    const loadPdfLib = async () => {
+      if (window.pdfjsLib) {
+        setPdfLibReady(true);
+        return;
+      }
+      try {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = () => {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          setPdfLibReady(true);
+          console.log("PDF Library Loaded Successfully 💅");
+        };
+        document.body.appendChild(script);
+      } catch (e) {
+        console.error("PDF Lib Load Failed", e);
+      }
+    };
+    loadPdfLib();
+  }, []);
+
+  const handleInputCheck = (e) => {
+    setContent(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
+  };
+
+  // --- REAL PDF EXTRACTION LOGIC ---
+  const extractTextFromPdf = async (file) => {
+    if (!pdfLibReady) {
+      setError("PDF 엔진 예열 중이야. 잠시만 기다려! 💅");
+      return;
+    }
+
+    setExtracting(true);
+    setFileName(file.name);
+    setError(""); // Clear previous errors
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
+      let fullText = "";
+      
+      // Limit pages to avoid browser freeze in demo
+      const maxPages = pdf.numPages > 20 ? 20 : pdf.numPages;
+      if (pdf.numPages > 20) setError(`Warning: 20페이지만 읽었어. 너무 길면 나 힘들어. 💅`);
+
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += `[Page ${i}]\n${pageText}\n\n`;
+      }
+
+      setContent(fullText);
+    } catch (err) {
+      console.error(err);
+      setError("PDF 읽다가 체했어. 텍스트가 깨진 파일 아니니? 🤷‍♀️");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const processFile = (file) => {
+    if (!file) return;
+
+    // HANDLE PDF
+    if (file.type === 'application/pdf') {
+      extractTextFromPdf(file);
+      return;
+    }
+
+    // HANDLE TEXT
+    if (file.type === 'text/plain' || file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setContent(e.target.result);
+        setFileName(file.name);
+        setError(""); 
+      };
+      reader.readAsText(file);
+    } else {
+      setError("Hey! PDF나 텍스트 파일만 가져와. 이상한 거 주지 말고. 🤷‍♀️");
+    }
+  };
+
+  const handleFileChange = (e) => {
+    processFile(e.target.files[0]);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    processFile(e.dataTransfer.files[0]);
+  };
+
+  const clearFile = () => {
+    setFileName('');
+    setContent('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // --- GENERATE LOGIC ---
+  const generateStudyMaterial = async () => {
+    if (!content.trim()) {
+      if (mode === 'Q') setError("Excuse me? Paper가 없잖아. Seriously? Moonstruck 당하고 싶어? 💅");
+      else if (mode === 'N') setError("Error 404: Void input detected.");
+      else setError("훈련병! 텍스트 입력 누락. 즉시 시정하라.");
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    setResponse('');
+
+    // Demo Mode Logic
+    if (!apiKey) {
+      setTimeout(() => {
+        setResponse(MOCK_DATA[mode]);
+        setLoading(false);
+        if(mode === 'Q') setError("✨ DEMO MODE Activated! (Key 없어서 가짜 데이터 보여줌) 💅");
+        else setError("✨ DEMO MODE: Simulated Output.");
+      }, 1500);
+      return;
+    }
+
+    // Real API Call
+    try {
+      const modeInstruction = mode === 'Q' ? "ACTIVATE [MODE Q: QUEEN GABEE] - Use Konglish." : 
+                              mode === 'N' ? "ACTIVATE [MODE N: NERD/GENIUS]" : 
+                              "ACTIVATE [MODE S: STANDARD]";
+
+      const finalPrompt = `${modeInstruction}\n\nHere is the study material:\n${content}\n\nGenerate the Excel table as per instructions.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: finalPrompt }] }],
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT_TEMPLATE }] }
+        })
+      });
+
+      if (!response.ok) throw new Error('API Key Issue or Network Error');
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      setResponse(text || "No response generated.");
+
+    } catch (err) {
+      console.error(err);
+      setError(`System Failure: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- DOWNLOAD HANDLERS ---
+  const handleDownload = (type) => {
+    if (!response) return;
+    let content = response;
+    let mimeType = 'text/plain';
+    let extension = 'txt';
+    let bom = '';
+    const timestamp = new Date().toISOString().slice(0,10);
+    const filename = `Moonstruck_${mode}_${timestamp}`;
+
+    switch (type) {
+      case 'csv':
+        const lines = response.split('\n');
+        let csvData = [];
+        lines.forEach(line => {
+          if (line.trim().startsWith('|') && !line.includes('---')) {
+            const row = line.split('|')
+              .filter((_, i, arr) => i !== 0 && i !== arr.length - 1)
+              .map(cell => `"${cell.trim().replace(/"/g, '""')}"`)
+              .join(',');
+            csvData.push(row);
+          }
+        });
+        content = csvData.join('\r\n');
+        mimeType = 'text/csv;charset=utf-8';
+        extension = 'csv';
+        bom = '\uFEFF'; 
+        break;
+      case 'md': extension = 'md'; break;
+      case 'doc':
+        content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Study Material</title></head><body>${response.replace(/\n/g, '<br>')}</body></html>`;
+        mimeType = 'application/msword';
+        extension = 'doc';
+        break;
+      case 'pdf':
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>Study Material</title><style>body{font-family: sans-serif; white-space: pre-wrap;}</style></head><body>');
+        printWindow.document.write(`<pre>${response}</pre>`);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+        return; 
+      default: break;
+    }
+    const blob = new Blob([bom + content], { type: mimeType });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- THEME ---
+  const getTheme = () => {
+    switch(mode) {
+      case 'Q': return {
+        bg: 'bg-gradient-to-br from-pink-100 via-rose-50 to-white',
+        card: 'bg-white/80 backdrop-blur-md border-pink-200 shadow-xl shadow-pink-200/50',
+        text: 'text-gray-800',
+        accent: 'text-pink-600',
+        button: 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-pink-300',
+        border: 'border-pink-200 focus:border-pink-400',
+        icon: <Sparkles className="w-6 h-6 text-pink-500 animate-pulse" />,
+        title: "Queen's Private Gym",
+        desc: "Hey Student Manager! Get Struck by me. ✨",
+        placeholder: "Paste text or Drag & Drop PDF here... (I will read it! 💅)",
+        submit: "Moonstruck! ✨"
+      };
+      case 'N': return {
+        bg: 'bg-gradient-to-br from-indigo-100 via-purple-50 to-white',
+        card: 'bg-white/90 backdrop-blur-md border-indigo-200 shadow-xl shadow-indigo-200/50',
+        text: 'text-gray-800',
+        accent: 'text-indigo-600',
+        button: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-indigo-300',
+        border: 'border-indigo-200 focus:border-indigo-400',
+        icon: <Brain className="w-6 h-6 text-indigo-500" />,
+        title: "Nerd's Cheat Lab",
+        desc: "Hack your brain with logic.",
+        placeholder: "Paste text or Drag & Drop PDF here... (Parsing Enabled 🧪)",
+        submit: "Compile Data 🧪"
+      };
+      default: return { // S
+        bg: 'bg-gradient-to-br from-slate-200 via-gray-100 to-white',
+        card: 'bg-white border-slate-300 shadow-xl shadow-slate-300/50',
+        text: 'text-slate-900',
+        accent: 'text-slate-700',
+        button: 'bg-slate-800 text-white shadow-slate-400',
+        border: 'border-slate-300 focus:border-slate-500',
+        icon: <BookOpen className="w-6 h-6 text-slate-700" />,
+        title: "Drill Sergeant FM",
+        desc: "No pain, no gain. Stick to the manual.",
+        placeholder: "Paste text or Drag & Drop PDF here... (Text Extraction Ready)",
+        submit: "Execute Training 🛡️"
+      };
+    }
+  };
+
+  const theme = getTheme();
+
+  return (
+    <div className={`min-h-screen transition-all duration-700 ${theme.bg} p-4 sm:p-8 flex flex-col items-center justify-center`}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+        h1, h2, button, .ui-text, .tab-text, .brand-logo { font-family: 'Jua', sans-serif; }
+        textarea, pre { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+        .animation-fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* Brand Header */}
+      <div className="mb-6 flex items-center gap-3 brand-logo animate-pulse cursor-default group">
+         <div className="relative">
+            <Moon className={`w-10 h-10 transition-transform duration-500 group-hover:-rotate-12 ${mode === 'Q' ? 'text-pink-600 fill-pink-200' : mode === 'N' ? 'text-indigo-600 fill-indigo-200' : 'text-slate-800 fill-slate-200'}`} strokeWidth={2.5} />
+            <Zap className={`absolute -bottom-1 -right-2 w-6 h-6 animate-bounce ${mode === 'Q' ? 'text-yellow-400 fill-yellow-200' : 'text-yellow-500 fill-yellow-200'}`} strokeWidth={3} />
+         </div>
+         <div className="flex flex-col pl-2">
+           <h1 className={`text-4xl sm:text-5xl font-black tracking-tighter leading-none ${mode === 'Q' ? 'text-pink-600' : mode === 'N' ? 'text-indigo-600' : 'text-slate-800'}`}>
+              Moonstruck!
+           </h1>
+           <span className={`text-[12px] tracking-[0.2em] font-bold text-right opacity-60 ${mode === 'Q' ? 'text-pink-800' : 'text-slate-600'}`}>
+              Rise and Shine! ✨
+           </span>
+         </div>
+      </div>
+
+      {/* Main Container */}
+      <div className={`w-full max-w-4xl rounded-3xl p-6 sm:p-10 transition-all duration-500 border ${theme.card}`}>
+        
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-2xl bg-white shadow-sm border ${theme.border}`}>
+              {theme.icon}
+            </div>
+            <div>
+              <h1 className={`text-3xl tracking-tight ${theme.accent}`}>{theme.title}</h1>
+              <p className="text-sm font-medium text-gray-400 mt-1 flex items-center gap-2 ui-text">{theme.desc}</p>
+            </div>
+          </div>
+          
+          <div className="flex bg-gray-100/50 p-1.5 rounded-full border border-gray-200 backdrop-blur-sm self-start sm:self-center">
+            {['Q', 'N', 'S'].map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`px-4 py-2 rounded-full text-sm transition-all duration-300 tab-text ${
+                  mode === m ? 'bg-white text-black shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {m === 'Q' ? 'QUEEN 👑' : m === 'N' ? 'NERD 🤓' : 'FM 👮'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Controls */}
+        <div className="space-y-6">
+          
+          {/* API Key Input */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className={`text-xs font-bold ui-text transition-colors ${isDemo ? 'text-gray-400' : 'text-green-600'}`}>
+                {isDemo ? 'DEMO MODE' : 'LIVE MODE'}
+              </span>
+            </div>
+            <input 
+              type="password" 
+              placeholder="API Key (비워두면 Demo Mode ✨)" 
+              className={`w-full sm:w-1/2 bg-gray-50/50 border ${theme.border} text-gray-600 text-sm rounded-xl py-2.5 pl-24 pr-10 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all focus:ring-gray-400 ui-text`}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-1/2 mr-3 flex items-center pointer-events-none">
+               {isDemo ? <Lock className="w-4 h-4 text-gray-400" /> : <Unlock className="w-4 h-4 text-green-500" />}
+            </div>
+          </div>
+
+          {/* DRAG & DROP AREA + Textarea */}
+          <div className="relative space-y-2">
+            
+            {/* Drop Zone Header */}
+            <div 
+              className={`flex justify-between items-center text-xs font-bold px-2 ui-text transition-colors ${isDragging ? 'text-pink-500' : 'text-gray-400'}`}
+            >
+              <span>INPUT DATA</span>
+              <span>{isDragging ? "DROP IT LIKE IT'S HOT 🔥" : "DRAG & DROP PDF OR TEXT"}</span>
+            </div>
+
+            {/* Drop Container */}
+            <div 
+              className={`relative group rounded-2xl transition-all duration-300 ${isDragging ? 'scale-[1.01] ring-2 ring-pink-400 shadow-lg' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+               {extracting ? (
+                 <div className={`w-full min-h-[200px] rounded-2xl border bg-white/50 flex flex-col items-center justify-center ${theme.border}`}>
+                    <Loader2 className={`w-8 h-8 animate-spin mb-2 ${mode === 'Q' ? 'text-pink-500' : 'text-indigo-500'}`} />
+                    <span className="font-bold font-jua text-gray-500">PDF 읽는 중... (Wait a sec)</span>
+                 </div>
+               ) : (
+                 <textarea 
+                  className={`w-full min-h-[200px] p-6 rounded-2xl border bg-white/50 focus:bg-white focus:ring-2 focus:ring-opacity-20 transition-all resize-none text-sm leading-relaxed ${theme.border} ${mode === 'Q' ? 'focus:ring-pink-500' : mode === 'N' ? 'focus:ring-indigo-500' : 'focus:ring-slate-500'}`}
+                  placeholder={theme.placeholder}
+                  onChange={handleInputCheck}
+                  value={content}
+                ></textarea>
+               )}
+              
+              {/* Overlay for Drop Indication */}
+              {isDragging && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10 animate-pulse">
+                  <UploadCloud className={`w-12 h-12 mb-2 ${mode === 'Q' ? 'text-pink-500' : 'text-indigo-500'}`} />
+                  <span className="text-xl font-bold font-jua text-gray-600">파일을 놓으세요! (Drop Here)</span>
+                </div>
+              )}
+
+              {/* Manual Upload Button (Floating) */}
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                {fileName && (
+                  <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-600 shadow-sm animate-fade-in-up">
+                    <FileText className="w-3 h-3" />
+                    <span className="max-w-[100px] truncate">{fileName}</span>
+                    <button onClick={clearFile} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                  </div>
+                )}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-2 rounded-lg bg-white shadow-md border hover:scale-110 transition-transform ${theme.border} text-gray-500`}
+                  title="Upload Text/PDF"
+                >
+                  <UploadCloud className="w-5 h-5" />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept=".txt,.md,.pdf,.csv"
+                  onChange={handleFileChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button 
+            onClick={generateStudyMaterial}
+            disabled={loading || extracting}
+            className={`w-full py-5 rounded-2xl text-xl shadow-lg transform transition-all active:scale-[0.98] flex justify-center items-center gap-3 ${theme.button} ${(loading || extracting) ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1'}`}
+          >
+            {(loading || extracting) ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+                <span className="tracking-widest text-sm ui-text">PROCESSING...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-6 h-6" />
+                <span className="tracking-wide ui-text">{isDemo ? `${theme.submit} (DEMO)` : theme.submit}</span>
+              </>
+            )}
+          </button>
+
+          {/* Error/Info Toast */}
+          {error && (
+            <div className={`p-4 text-sm font-semibold rounded-xl border flex items-center gap-3 animate-bounce ui-text ${error.includes('DEMO') ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+              <Sparkles className="w-5 h-5" /> 
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Result Section */}
+      {response && (
+        <div className="w-full max-w-4xl mt-8 animation-fade-in-up">
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <div className={`px-8 py-5 border-b flex flex-col sm:flex-row justify-between items-center gap-4 ${mode === 'Q' ? 'bg-pink-50/50' : 'bg-gray-50/50'}`}>
+              <h2 className="font-bold text-gray-700 flex items-center gap-2 text-lg">
+                <MessageSquare className="w-5 h-5 opacity-40" />
+                <span>Result Table</span>
+              </h2>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button onClick={() => handleDownload('csv')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors ui-text text-sm font-bold">
+                  <FileText className="w-4 h-4" /> CSV
+                </button>
+                <button onClick={() => handleDownload('doc')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors ui-text text-sm font-bold">
+                  <FileType className="w-4 h-4" /> Word
+                </button>
+                <button onClick={() => handleDownload('md')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors ui-text text-sm font-bold">
+                  <FileJson className="w-4 h-4" /> MD
+                </button>
+                <button onClick={() => handleDownload('pdf')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors ui-text text-sm font-bold">
+                  <Printer className="w-4 h-4" /> PDF
+                </button>
+              </div>
+            </div>
+            <div className="p-8 overflow-x-auto bg-white" ref={resultRef}>
+              <pre className="whitespace-pre-wrap font-mono text-sm leading-7 text-gray-600">
+                {response}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <footer className="mt-12 text-center text-xs font-medium text-gray-400 tracking-widest uppercase opacity-60 ui-text">
+        AI EdTech Portfolio | Prototype v2.6 (Real PDF Support)
+      </footer>
+    </div>
+  );
+};
+
+export default App;
