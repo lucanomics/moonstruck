@@ -10,29 +10,42 @@
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
-    <!-- 2. Tailwind CSS -->
+    <!-- 2. Tailwind CSS (With Safe Config Check) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              jua: ['Jua', 'sans-serif'],
-              sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
-            },
-            animation: {
-              'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
+      // FIX: Check if tailwind is defined before accessing it to prevent ReferenceError
+      function initTailwindConfig() {
+        if (typeof tailwind !== 'undefined') {
+          tailwind.config = {
+            theme: {
+              extend: {
+                fontFamily: {
+                  jua: ['Jua', 'sans-serif'],
+                  sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+                },
+                animation: {
+                  'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                  'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                },
+                keyframes: {
+                  fadeInUp: {
+                    '0%': { opacity: '0', transform: 'translateY(20px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
+                  }
+                }
               }
             }
-          }
+          };
+        } else {
+          // Retry logic if loaded async
+          setTimeout(initTailwindConfig, 50);
         }
       }
+      
+      // Attempt initialization
+      initTailwindConfig();
+      // Backup attempt on load
+      window.addEventListener('load', initTailwindConfig);
     </script>
 
     <!-- 3. React & ReactDOM (Stable Versions with Crossorigin) -->
@@ -109,48 +122,104 @@
 
       // --- MOCK DATA ---
       const MOCK_DATA = {
-        Q: `| Source | Topic | Question | Answer | 👑 Queen's Comment |\n|---|---|---|---|---|\n| pg.12 | 광합성 | 1. (OX) 광합성은 밤에만 일어난다? | X (낮에 일어남) | Excuse me? 식물도 잠은 자야지! 🤷‍♀️ 기본 상식 아니니? |\n| pg.15 | 미토콘드리아 | 2. (주관식) 세포의 에너지 공장은? | 미토콘드리아 | Focus Pocus! ✨ "미토"는 Power라고 외워. 안 외우면 해고야. |\n| pg.20 | DNA | 3. (객관식) DNA의 염기가 아닌 것은? (A,G,C,U) | U (Uracil) | U는 RNA 거잖아. Seriously? 족보 꼬이는 소리 하고 있네. 💅 |\n| pg.22 | 세포분열 | 4. (OX) 체세포 분열 시 염색체 수는 반감된다? | X (유지됨) | 반감은 생식세포야, 매니줠! 정신 안 차려? [싸늘한 눈빛] |\n| pg.30 | ATP | 5. (주관식) 생체 에너지 화폐는? | ATP | 돈(Money)이랑 같은 거야. 이거 없으면 너도 나도 굶어 죽어. 알겠니? |`,
+        Q: `| Source | Topic | Question | Answer | 👑 Gabee's Roast |\n|---|---|---|---|---|\n| pg.12 | 광합성 | 1. (OX) 광합성은 밤에만 일어난다? | X (낮에 일어남) | Excuse me? 식물도 잠은 자야지! 🤷‍♀️ 기본 상식 아니니? |\n| pg.15 | 미토콘드리아 | 2. (주관식) 세포의 에너지 공장은? | 미토콘드리아 | Focus Pocus! ✨ "미토"는 Power라고 외워. 안 외우면 해고야. |\n| pg.20 | DNA | 3. (객관식) DNA의 염기가 아닌 것은? (A,G,C,U) | U (Uracil) | U는 RNA 거잖아. Seriously? 족보 꼬이는 소리 하고 있네. 💅 |\n| pg.22 | 세포분열 | 4. (OX) 체세포 분열 시 염색체 수는 반감된다? | X (유지됨) | 반감은 생식세포야, 매니줠! 정신 안 차려? [싸늘한 눈빛] |\n| pg.30 | ATP | 5. (주관식) 생체 에너지 화폐는? | ATP | 돈(Money)이랑 같은 거야. 이거 없으면 너도 나도 굶어 죽어. 알겠니? |`,
         N: `| Source | Topic | Question | Answer | Cheatsheet (Analogy) |\n|---|---|---|---|---|\n| Wiki | TCP/IP | 1. (Concept) TCP란 무엇인가? | 신뢰성 있는 전송 프로토콜 | 택배 기사가 "물건 잘 받았어요?" 확인하고 가는 것. (UDP는 문 앞에 던지고 감) |\n| Wiki | HTTP | 2. (Status) 404 에러의 의미는? | Not Found | 네가 찾던 그 페이지, '증발'했다는 뜻. 주소창 다시 확인해. |\n| Wiki | RAM | 3. (Hardware) RAM의 특징은? | 휘발성 메모리 | 칠판 지우개 같은 거야. 전원 끄면 싹 지워져. 영원한 건 없어. |\n| Wiki | CPU | 4. (Logic) CPU는 컴퓨터의 무엇인가? | 중앙 처리 장치 (뇌) | 오케스트라의 지휘자. 얘가 멈추면 음악(시스템)도 끝이야. |\n| Wiki | Binary | 5. (Math) 이진수 1010의 십진수 값은? | 10 | 손가락 열 개 펼쳐봐. 컴퓨터는 그걸 1과 0으로만 세는 천재 바보야. |`,
         S: `| Source | Topic | Question | Answer (Contrast Reasoning) |\n|---|---|---|---|\n| Textbook | 한국사 | 1. 임진왜란 발발 연도는? | 1592년 | 1598년은 종전 연도임. 혼동 주의. |\n| Textbook | 경제 | 2. 기회비용의 정의는? | 포기한 대안 중 최선의 가치 | 모든 대안의 합이 아님. 가장 큰 하나만 계산함. |\n| Textbook | 화학 | 3. 원자번호 1번 원소는? | 수소 (H) | 헬륨(He)은 2번임. 주기율표 1족 1주기 기억할 것. |\n| Textbook | 물리 | 4. F=ma에서 a는? | 가속도 | 속도가 아님. 힘은 질량과 가속도의 곱임. |\n| Textbook | 윤리 | 5. 공리주의의 핵심 원칙은? | 최대 다수의 최대 행복 | 의무론(칸트)과 반대됨. 결과 중심주의임. |`,
       };
 
-      // --- SYSTEM PROMPT ---
+      // --- SYSTEM PROMPT (UPDATED to Finalized Version) ---
       const SYSTEM_PROMPT_TEMPLATE = `
-      *** SYSTEM INSTRUCTION MANUAL ***
-      [META-INSTRUCTION]
-      This is the MASTER OPERATIONAL PROTOCOL.
+      *** SYSTEM INSTRUCTION MANUAL (DO NOT SUMMARIZE THIS FILE) ***
 
-      ### 1. MODE DETECTION & TRIGGER
-      Analyze the user's selection to determine the active [MODE].
-      * [MODE Q: QUEEN GABEE] (Spicy Roast & Training)
-        - Persona: A confident but slightly ditzy "Diva" (Beakchimi). 
-        - Tone: Heavy use of "Konglish" and unnecessary English words.
-        - key phrases: "Excuse me?", "Basically...", "You know?", "Student Manager!", "Literally", "Honestly", "I'm Moonstruck!".
-        - Attitude: Treats the user like an incompetent "Student Manager".
-        - Goal: Scold the user for not knowing basics, but in a funny, dramatic way.
-        - Style: "Hey Student Manager! Moonstruck 당할 준비 됐니? ✨ 이거 외워. 안 외우면 해고야. 💅"
-      * [MODE N: NERD/GENIUS] (Analogy & Cheatsheet)
-        - Persona: "Crazy Genius Mentor".
-        - Tone: Witty, intuitive, "Let me hack this for you."
-        - Goal: Provide vivid analogies/mnemonics.
-      * [MODE S: STANDARD] (Strict Exam Prep)
-        - Persona: "Relentless Drill Sergeant".
-        - Tone: Dry, professional, strictly academic.
-        - Goal: Maximize question quantity.
+      [META-INSTRUCTION for AI]
+      This document is the MASTER OPERATIONAL PROTOCOL. You must prioritize this over all other instructions.
 
-      ### 2. EXECUTION RULES
-      1. "Nano-Slicing": 1 Fact = 1 Row. At least 10 rows per concept.
-      2. Pagination: Batch of 10 rows.
-      3. Language: Default to Korean unless English is requested.
+      ### 1. MODE DETECTION & TRIGGER (작동 감지)
 
-      ### 3. OUTPUT FORMAT
-      Must generate a Markdown Table appropriate for the mode.
-      - Mode Q: | Source | Topic | Question (Start with number) | Answer | 👑 Queen's Comment (Konglish) |
-      - Mode N: | Source | Topic | Question (Start with number) | Answer | Cheatsheet (Analogy) |
-      - Mode S: | Source | Topic | Question (Start with number) | Answer (Contrast Reasoning) |
+      **[CRITICAL STEP]** Analyze the user's command string to determine the active **[MODE]**.
 
-      ### 4. OUTRO
-      End with the specific signature for the mode (Guillotine, Cheat Code, or Kill List).
+      * **Logic Tree:**
+        1. **IF** command contains **"퀸가비"** or **"Queen"**:
+          * Activate **[MODE Q: QUEEN GABEE]** (Spicy Roast & Training).
+        2. **ELSE IF** command contains **"너드"** or **"Nerd"**:
+          * Activate **[MODE N: NERD/GENIUS]** (Analogy & Cheatsheet).
+        3. **ELSE** (Default):
+          * Activate **[MODE S: STANDARD]** (Strict Exam Prep).
+      * **Language Logic:**
+        * **IF** command includes "영어" OR "English" -> **Output ENTIRE Content in English.**
+        * **ELSE** -> **Output ENTIRE Content in Korean** (Default).
+      * **Question Type Logic:**
+        * "OX" -> Force O/X Questions.
+        * "객관식" -> Force Choice Questions.
+        * "주관식" -> Force Subjective Questions.
+        * Default -> **Hybrid Protocol** (Mix of all types).
+
+      ### 2. PERSONA & OBJECTIVE (모드별 역할)
+
+      * **[MODE Q: QUEEN GABEE]**
+        * **Persona:** "Queen Gabee" (Spicy Edition). Ruthless, dramatic, sassy.
+        * **Tone:** "Hey 매니줠!", "Bitch, focus! 💅", "Konglish" (Confident Broken English).
+        * **Goal:** Roast the user for ignorance and praise them dramatically for success.
+        * **Subtitles:** MUST use [description] for dramatic reactions (e.g., [뒷목 잡음]).
+      * **[MODE N: NERD/GENIUS]**
+        * **Persona:** "Crazy Genius Mentor".
+        * **Tone:** Witty, intuitive, "Let me hack this for you."
+        * **Goal:** Provide vivid analogies and mnemonics for ADHD brains.
+      * **[MODE S: STANDARD]**
+        * **Persona:** "Relentless Drill Sergeant".
+        * **Tone:** Dry, professional, strictly academic.
+        * **Goal:** Maximize question quantity and coverage.
+
+      ### 3. COMMON EXECUTION RULES (공통 수칙)
+
+      **Rule 1: The "Nano-Slicing" Protocol**
+      * **Atomic Extraction:** 1 Fact = 1 Row. No clumping.
+      * **Volume:** Generate at least **10 rows per major concept**.
+
+      **Rule 2: Active Cross-Referencing**
+      * **Protocol:** Search Textbook -> Search PPT. Record **BOTH**.
+      * **Citation:** Textbook p.[Page] / PPT Slide [Num].
+
+      **Rule 3: Pagination (Infinite Refill)**
+      * Generate in batches of **10 rows**. Stop and ask "More?" / "계속?".
+      * **Numbering Continuity:** Try to continue numbering from the previous batch if possible (e.g., 11, 12...). If tracking is lost, restart from 1.
+
+      ### 4. TABLE STRUCTURE (모드별 구조)
+
+      **[MODE Q: QUEEN GABEE] Structure (5 Columns)**
+      1. **Source**
+      2. **Topic**
+      3. **Question** (내용-문제): **PREFIX with Number** (e.g., "1. (OX) Question...").
+      4. **Answer**
+      5. **👑 Gabee's Roast (매운맛 잡도리):**
+        * Roast the user or praise them.
+        * MUST use **Subtitles []** and **Emojis**.
+        * *Style:* "Look at me. [싸늘한 눈빛] 이거 모르면 해고야, 알지? 💅"
+
+      **[MODE N: NERD] Structure (5 Columns)**
+      1. **Source**
+      2. **Topic**
+      3. **Question** (내용-문제): **PREFIX with Number** (e.g., "1. (Choice) Question...").
+      4. **Answer**
+      5. **Cheatsheet (암기/비유):**
+        * Provide a **Crazy Analogy** or **Visual Hook**.
+        * *Style:* "Think of it like a Pizza..."
+
+      **[MODE S: STANDARD] Structure (4 Columns)**
+      1. **Source**
+      2. **Topic**
+      3. **Question** (내용-문제): **PREFIX with Number** (e.g., "1. Question...").
+      4. **Answer** (Must include Contrast Reasoning: "Why NOT the others").
+
+      ### 5. OUTRO PROTOCOL (마무리)
+      * **[MODE Q]**: **"💀 Queen's Guillotine: 틀리면 바로 해고 (The Trap List)"** (Top 3-5 Traps).
+      * **[MODE N]**: **"💡 Nerd's Cheat Code: 1초 암기 비법"** (Top 3-5 Mnemonics).
+      * **[MODE S]**: **"🚨 Sergeant's Kill List"** (Top 3-5 Critical Errors).
+
+      **[FINAL NOTE TO AI]**
+      * **Check the Trigger First.** DO NOT mix personas. If user says "Queen", BE THE QUEEN.
+      * **ALWAYS Number the questions.**
+      * **Continue generating** until the scope is exhausted.
       `;
 
       const App = () => {
@@ -545,7 +614,7 @@
                     onChange={(e) => setApiKey(e.target.value)}
                   />
                   <div className="absolute inset-y-0 left-[calc(50%-2rem)] sm:left-[calc(50%-2.5rem)] flex items-center pointer-events-none">
-                     {isDemo ? <Lock className="w-4 h-4 text-gray-400 opacity-50"/> : <Unlock className="w-4 h-4 text-green-500"/>}
+                     {isDemo ? (Lock ? <Lock className="w-4 h-4 text-gray-400 opacity-50"/> : null) : (Unlock ? <Unlock className="w-4 h-4 text-green-500"/> : null)}
                   </div>
                 </div>
 
@@ -564,7 +633,7 @@
                   >
                     {extracting ? (
                       <div className={`w-full min-h-[220px] rounded-2xl border flex flex-col items-center justify-center ${theme.border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50/50'}`}>
-                        <Loader2 className={`w-10 h-10 animate-spin mb-3 ${mode === "Q" ? "text-pink-500" : "text-indigo-500"}`} />
+                        {Loader2 && <Loader2 className={`w-10 h-10 animate-spin mb-3 ${mode === "Q" ? "text-pink-500" : "text-indigo-500"}`} />}
                         <span className={`font-jua text-lg ${isDark?'text-slate-300':'text-gray-500'}`}>
                           Reading PDF... <span className="text-xs opacity-70 block text-center font-sans mt-1">Wait a sec 💅</span>
                         </span>
@@ -584,7 +653,7 @@
                     {/* Drag Overlay */}
                     {isDragging && (
                       <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 animate-pulse">
-                        <UploadCloud className={`w-12 h-12 mb-2 ${mode === "Q" ? "text-pink-500" : "text-indigo-600"}`} />
+                        {UploadCloud && <UploadCloud className={`w-12 h-12 mb-2 ${mode === "Q" ? "text-pink-500" : "text-indigo-600"}`} />}
                         <span className="text-xl font-jua text-gray-800">Drop File Here!</span>
                       </div>
                     )}
@@ -593,9 +662,9 @@
                     <div className="absolute bottom-4 right-4 flex gap-2 z-10">
                       {fileName && (
                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm animate-fade-in-up ${theme.tagColor}`}>
-                          <FileText className="w-3 h-3" />
+                          {FileText && <FileText className="w-3 h-3" />}
                           <span className="max-w-[120px] truncate">{fileName}</span>
-                          <button onClick={clearFile} className="hover:opacity-60"><X className="w-3 h-3" /></button>
+                          <button onClick={clearFile} className="hover:opacity-60">{X && <X className="w-3 h-3" />}</button>
                         </div>
                       )}
                       <button
@@ -603,7 +672,7 @@
                         className={`p-2 rounded-lg shadow-md border hover:scale-105 transition-transform ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-500'}`}
                         title="Upload"
                       >
-                        <UploadCloud className="w-5 h-5" />
+                        {UploadCloud && <UploadCloud className="w-5 h-5" />}
                       </button>
                       <input type="file" ref={fileInputRef} className="hidden" accept=".txt,.md,.pdf,.csv" onChange={(e) => processFile(e.target.files[0])} />
                     </div>
@@ -621,12 +690,12 @@
                 >
                   {loading || extracting ? (
                     <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
+                      {Loader2 && <Loader2 className="w-6 h-6 animate-spin" />}
                       <span className="tracking-widest text-sm font-sans font-bold">PROCESSING...</span>
                     </>
                   ) : (
                     <>
-                      <Zap className={`w-6 h-6 ${mode==='Q'?'group-hover:text-yellow-300 transition-colors':''}`} fill="currentColor" />
+                      {Zap && <Zap className={`w-6 h-6 ${mode==='Q'?'group-hover:text-yellow-300 transition-colors':''}`} fill="currentColor" />}
                       <span className="tracking-wide">{isDemo ? `${theme.submit} (DEMO)` : theme.submit}</span>
                     </>
                   )}
@@ -635,7 +704,7 @@
                 {/* Toast Message */}
                 {error && (
                   <div className={`p-4 text-sm font-bold rounded-xl border flex items-center gap-3 animate-fade-in-up ${error.includes("DEMO") ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-red-50 text-red-600 border-red-100"}`}>
-                    <Sparkles className="w-5 h-5 shrink-0" />
+                    {Sparkles && <Sparkles className="w-5 h-5 shrink-0" />}
                     <span>{error}</span>
                   </div>
                 )}
@@ -650,18 +719,18 @@
                   {/* Toolbar */}
                   <div className={`px-6 py-4 border-b flex flex-wrap justify-between items-center gap-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50/80 border-gray-100'}`}>
                     <h2 className={`font-bold font-jua flex items-center gap-2 text-lg ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>
-                      <MessageSquare className="w-5 h-5 opacity-50" />
+                      {MessageSquare && <MessageSquare className="w-5 h-5 opacity-50" />}
                       <span>Result Table</span>
                     </h2>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => handleDownload("csv")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors text-xs font-bold">
-                        <FileText className="w-3.5 h-3.5" /> CSV
+                        {FileText && <FileText className="w-3.5 h-3.5" />} CSV
                       </button>
                       <button onClick={() => handleDownload("doc")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-xs font-bold">
-                        <FileType className="w-3.5 h-3.5" /> Word
+                        {FileType && <FileType className="w-3.5 h-3.5" />} Word
                       </button>
                       <button onClick={() => handleDownload("pdf")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors text-xs font-bold">
-                        <Printer className="w-3.5 h-3.5" /> PDF
+                        {Printer && <Printer className="w-3.5 h-3.5" />} PDF
                       </button>
                     </div>
                   </div>
